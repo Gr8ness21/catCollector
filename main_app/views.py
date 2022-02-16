@@ -54,13 +54,6 @@ def assoc_toy(request, cat_id, toy_id):
 
 
 
-
-
-
-
-
-
-
 def add_photo(request, cat_id):
     # collect the file asset from the request
     photo_file = request.FILES.get('photo-file', None)
@@ -90,20 +83,9 @@ def add_photo(request, cat_id):
     return redirect('detail', cat_id=cat_id)
 
 
-
-
-
-
-
-
-
-
-
-
-
 class CatCreate(CreateView):
     model = Cat
-    fields = '__all__'
+    fields = ('name', 'age', 'breed', 'description')
     # success_url = '/cats/' 
 
 class CatUpdate(UpdateView):
