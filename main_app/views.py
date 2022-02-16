@@ -1,10 +1,16 @@
-from pyexpat import model
 from django.shortcuts import render, redirect
 from django.views.generic import ListView
 from django.views.generic.detail import DetailView
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
-from .models import Cat, Toy
+from .models import Cat, Toy, Photo
 from .forms import FeedingForm
+import boto3
+import uuid
+
+# Environment Variables
+S3_BASE_URL = 'https://s3.us-east-1.amazonaws.com/'
+BUCKET = 'cat-collector-persistence-danieljs'
+
 
 # Create your views here.
 def home(request):
@@ -46,9 +52,40 @@ def assoc_toy(request, cat_id, toy_id):
    Cat.objects.get(id=cat_id).toys.add(toy_id)
    return redirect('detail', cat_id=cat_id)
 
+
+
+def add_photo(request, cat_id):
+    # collect the file asset from the request
+    photo_file = request.FILES.get('photo-file', None)
+    # check if file is present
+    if photo_file:
+        # create a reference to the s3 service from boto3
+        s3 = boto3.client('s3')
+        # create a unique identifier for each photo asset
+        key = uuid.uuid4().hex[:6] + photo_file.name[photo_file.name.rfind('.'):]
+        # cute_cat.png => 3g3egg.png
+        try:
+            # attempt to upload image to aws
+            s3.upload_fileobj(photo_file, BUCKET, key)
+            # dynamically generate photo url
+            url = f"{S3_BASE_URL}{BUCKET}/{key}"
+            # create an in-memory reference to a photo model instance
+            photo = Photo(url=url, cat_id=cat_id)
+            # save the instance to the database
+            photo.save()
+
+        except Exception as error:
+            print('*****************')
+            print('An error has occurred with s3:')
+            print(error)
+            print('*****************')
+    
+    return redirect('detail', cat_id=cat_id)
+
+
 class CatCreate(CreateView):
     model = Cat
-    fields = '__all__'
+    fields = ('name', 'age', 'breed', 'description')
     # success_url = '/cats/' 
 
 class CatUpdate(UpdateView):
